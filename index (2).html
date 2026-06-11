@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>직장생활 밸런스 게임</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif}
+body{background:#f4f6fa;color:#1a2233;min-height:100vh}
+.wrap{max-width:520px;margin:0 auto;padding:16px}
+.hidden{display:none!important}
+/* ===== 학습자 화면 ===== */
+.head{text-align:center;padding:14px 0 6px}
+.head h1{font-size:22px;color:#2563eb}
+.head p{font-size:13px;color:#6b7280;margin-top:4px}
+.prog{height:8px;background:#e5e7eb;border-radius:4px;margin:14px 0 6px;overflow:hidden}
+.prog>div{height:100%;background:#2563eb;border-radius:4px;transition:width .3s}
+.pnum{font-size:12px;color:#6b7280;text-align:right;margin-bottom:8px}
+.qtitle{font-size:18px;font-weight:700;text-align:center;margin:10px 0 14px;min-height:48px;display:flex;align-items:center;justify-content:center}
+/* A/B 카드: 높이·위치 고정 */
+.opt{display:block;width:100%;height:128px;border:2px solid #d1d5db;border-radius:14px;background:#fff;margin-bottom:14px;cursor:pointer;text-align:left;padding:0 16px;display:flex;align-items:center;gap:14px;transition:transform .08s}
+.opt:active{transform:scale(.97);border-color:#2563eb;background:#eff6ff}
+.opt .ico{font-size:44px;flex:0 0 64px;text-align:center;line-height:1}
+.opt .lab{flex:1}
+.opt .tag{display:inline-block;font-size:12px;font-weight:800;color:#fff;border-radius:5px;padding:2px 8px;margin-bottom:6px}
+.opt.a .tag{background:#2563eb}
+.opt.b .tag{background:#f59e0b}
+.opt .txt{font-size:15px;font-weight:600;line-height:1.45;word-break:keep-all}
+.vs{text-align:center;font-size:14px;font-weight:800;color:#9ca3af;margin:-4px 0 10px}
+/* 결과 화면 */
+.res{background:#fff;border:1px solid #d1d5db;border-radius:14px;padding:24px 18px;text-align:center;margin-top:18px}
+.res .big{font-size:54px}
+.res h2{font-size:21px;color:#2563eb;margin:8px 0 4px}
+.res .mbti{display:inline-block;background:#eff6ff;color:#2563eb;font-weight:800;font-size:14px;border-radius:6px;padding:4px 12px;margin:6px 0 10px}
+.res p{font-size:14px;line-height:1.6;color:#374151;word-break:keep-all}
+.done{font-size:12px;color:#9ca3af;margin-top:14px}
+/* ===== 관리자 화면 ===== */
+.admin{max-width:1100px;margin:0 auto;padding:16px}
+.atop{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;margin-bottom:14px}
+.card{background:#fff;border:1px solid #d1d5db;border-radius:10px;padding:14px}
+.qrbox{text-align:center;flex:0 0 250px}
+.qrbox img{width:200px;height:200px}
+.qrbox p{font-size:12px;color:#6b7280;margin-top:6px;word-break:break-all}
+.cnt{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center}
+.cnt .n{font-size:48px;font-weight:800;color:#2563eb}
+.cnt .l{font-size:14px;color:#6b7280}
+.types{flex:1.4}
+.types h3,.charts h3{font-size:15px;margin-bottom:10px}
+.trow{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px}
+.trow .tn{flex:0 0 170px;font-weight:600}
+.trow .tm{flex:0 0 86px;color:#2563eb;font-weight:700;font-size:12px}
+.tbar{flex:1;height:18px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.tbar>div{height:100%;background:#2563eb;transition:width .5s}
+.trow .tp{flex:0 0 64px;text-align:right;font-weight:700}
+.charts .qrow{margin-bottom:13px}
+.qrow .qt{font-size:13px;font-weight:600;margin-bottom:4px}
+.bar{display:flex;height:26px;border-radius:5px;overflow:hidden;background:#e5e7eb;font-size:12px;font-weight:700;color:#fff}
+.bar .ba{background:#2563eb;display:flex;align-items:center;padding-left:8px;transition:width .5s;white-space:nowrap;overflow:hidden}
+.bar .bb{background:#f59e0b;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width .5s;white-space:nowrap;overflow:hidden}
+.legend{display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:2px}
+.rst{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;margin-top:12px}
+.warn{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;padding:14px;font-size:14px;line-height:1.6;margin-bottom:14px}
+@media(max-width:760px){.atop{flex-direction:column}.trow .tn{flex-basis:120px;font-size:12px}}
+</style>
+</head>
+<body>
+<script>
+/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+   아래 따옴표 안에 본인의 Firebase Realtime Database 주소를 넣으세요.
+   예) https://balance-game-xxxxx-default-rtdb.asia-southeast1.firebasedatabase.app
+   ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */
+const DB_URL = "https://balance-game-01-default-rtdb.asia-southeast1.firebasedatabase.app/";
+
+/* ===== 8개 문항 (ia/ib = 선택지 이모지 아이콘) ===== */
+const QS = [
+ {t:"인생 선택의 기로!", a:"월 200 받는 백수", b:"월 500 버는 직장인", ia:"🏖️💰", ib:"💼💵"},
+ {t:"출퇴근과 상사", a:"도보 5분 거리, 매일 화내는 사이코 팀장", b:"왕복 3시간 거리, 매일 칭찬하는 천사 팀장", ia:"😡🚶", ib:"😇🚌"},
+ {t:"급여와 워라밸", a:"월급 그대로, 매일 오후 4시 칼퇴근", b:"월급 2배, 매일 밤 10시까지 야근", ia:"🌅🏃", ib:"💰🌙"},
+ {t:"업무 스타일", a:"완벽한 계획 후 실행 (속도 느림)", b:"일단 빠르게 실행하며 수정 (잔실수 발생)", ia:"📋✏️", ib:"🚀⚡"},
+ {t:"점심시간", a:"내 돈으로 편의점 컵라면 (혼밥, 터치 없음)", b:"팀장님이 사주는 10만원 오마카세 (내내 업무 얘기)", ia:"🍜🧘", ib:"🍣💬"},
+ {t:"커뮤니케이션 방식", a:"카톡으로만 지시 (기록 남음, 밤에도 연락)", b:"전화로만 지시 (근무시간만, 기록 안 남음)", ia:"📱🌙", ib:"📞📝"},
+ {t:"커리어 가치관", a:"연봉 동결, 절대 안 잘리는 정년 보장", b:"연봉 매년 20% 인상, 내일 해고될 수도", ia:"🏛️🔒", ib:"📈🎢"},
+ {t:"최악의 실수 대결!", a:"새벽 2시 팀장님에게 게임 초대 문자 전송", b:"팀장 뒷담화를 팀장님께 잘못 전송", ia:"🎮😱", ib:"💀📨"}
+];
+
+/* ===== 4가지 유형 (축1: Q1,2,3,5 / 축2: Q4,6,7,8) ===== */
+const TYPES = [
+ {e:"🍀", n:"소확행 안정주의자", m:"ISFJ · ISTJ", d:"평화와 안정 속에서 묵묵히 제 몫을 해내는 사람! 스트레스 없는 환경에서 꾸준함으로 신뢰를 쌓는 '믿고 맡기는' 타입입니다."},
+ {e:"🏄", n:"마이웨이 자유인", m:"ISFP · INFP", d:"내 시간과 자율성이 최고! 간섭받지 않을 때 효율이 폭발하는 타입. 워라밸을 지키며 나만의 페이스로 성과를 냅니다."},
+ {e:"♟️", n:"치밀한 성장 전략가", m:"INTJ · ENTJ", d:"지금의 고생은 미래를 위한 투자! 명확한 목표와 계획으로 커리어를 차곡차곡 쌓아 올리는 야망가 타입입니다."},
+ {e:"🔥", n:"열정만렙 도전가", m:"ENFP · ESTP", d:"고민할 시간에 일단 부딪힌다! 분위기 메이커이자 즉흥 대처의 달인. 변화와 도전이 있어야 살아있음을 느낍니다."}
+];
+const AX1=[0,1,2,4], AX2=[3,5,6,7];
+function calcType(ans){
+ let s1=0,s2=0;
+ AX1.forEach(i=>{if(ans[i]===0)s1++});
+ AX2.forEach(i=>{if(ans[i]===0)s2++});
+ const stable=s1>=2, plan=s2>=2;
+ if(stable&&plan)return 0; if(stable&&!plan)return 1;
+ if(!stable&&plan)return 2; return 3;
+}
+const isAdmin = new URLSearchParams(location.search).get("mode")==="admin";
+const dbOk = DB_URL.indexOf("http")===0;
+const base = DB_URL.replace(/\/+$/,"");
+
+if(isAdmin){ renderAdmin(); } else { renderVoter(); }
+
+/* ============ 학습자 모드 ============ */
+function renderVoter(){
+ document.body.innerHTML += '<div class="wrap"><div class="head"><h1>⚖️ 직장생활 밸런스 게임</h1><p>당신의 선택은? A 또는 B를 골라주세요!</p></div><div class="prog"><div id="pg" style="width:0%"></div></div><div class="pnum" id="pn"></div><div id="stage"></div></div>';
+ let cur=0; const ans=[];
+ showQ();
+ function showQ(){
+  const q=QS[cur];
+  document.getElementById("pg").style.width=(cur/QS.length*100)+"%";
+  document.getElementById("pn").textContent="Q"+(cur+1)+" / "+QS.length;
+  document.getElementById("stage").innerHTML =
+   '<div class="qtitle">'+q.t+'</div>'+
+   '<button class="opt a" onclick="pick(0)"><span class="ico">'+q.ia+'</span><span class="lab"><span class="tag">A</span><div class="txt">'+q.a+'</div></span></button>'+
+   '<div class="vs">VS</div>'+
+   '<button class="opt b" onclick="pick(1)"><span class="ico">'+q.ib+'</span><span class="lab"><span class="tag">B</span><div class="txt">'+q.b+'</div></span></button>';
+ }
+ window.pick=function(v){
+  ans.push(v); cur++;
+  if(cur<QS.length){ showQ(); } else { finish(); }
+ };
+ function finish(){
+  const t=calcType(ans), T=TYPES[t];
+  document.getElementById("pg").style.width="100%";
+  document.getElementById("pn").textContent="완료!";
+  document.getElementById("stage").innerHTML =
+   '<div class="res"><div class="big">'+T.e+'</div><h2>'+T.n+'</h2><div class="mbti">참고 MBTI: '+T.m+'</div><p>'+T.d+'</p><div class="done" id="sv">결과 전송 중...</div></div>';
+  if(dbOk){
+   fetch(base+"/votes.json",{method:"POST",body:JSON.stringify({a:ans,t:t,ts:Date.now()})})
+    .then(()=>{document.getElementById("sv").textContent="✅ 응답이 제출되었습니다. 감사합니다!"})
+    .catch(()=>{document.getElementById("sv").textContent="⚠️ 전송 실패. 화면을 새로고침 후 다시 참여해 주세요."});
+  } else {
+   document.getElementById("sv").textContent="⚠️ DB 미설정 (체험 모드)";
+  }
+ }
+}
+
+/* ============ 관리자 모드 ============ */
+function renderAdmin(){
+ const myUrl=location.origin+location.pathname;
+ let h='<div class="admin"><div class="head"><h1>⚖️ 직장생활 밸런스 게임 — 실시간 현황</h1></div>';
+ if(!dbOk) h+='<div class="warn"><b>⚠️ DB 설정 필요:</b> index.html 파일 상단 ★ 표시 부분의 DB_URL에 Firebase 주소를 입력해 주세요. 현재는 데이터 수집이 되지 않습니다.</div>';
+ h+='<div class="atop">'+
+  '<div class="card qrbox"><img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(myUrl)+'" alt="QR"><p>📱 카메라로 스캔하세요<br>'+myUrl+'</p></div>'+
+  '<div class="card cnt"><div class="n" id="cnt">0</div><div class="l">참여 완료 인원</div></div>'+
+  '<div class="card types"><h3>🧭 성향 유형 분포 (참고 MBTI)</h3><div id="tlist"></div></div>'+
+  '</div><div class="card charts"><h3>📊 문항별 A/B 선택 비율</h3><div id="qlist"></div>'+
+  '<button class="rst" onclick="resetAll()">🗑️ 데이터 초기화</button></div></div>';
+ document.body.innerHTML += h;
+ /* 골격 렌더 */
+ document.getElementById("tlist").innerHTML = TYPES.map((T,i)=>
+  '<div class="trow"><span class="tn">'+T.e+' '+T.n+'</span><span class="tm">'+T.m+'</span><div class="tbar"><div id="tb'+i+'" style="width:0%"></div></div><span class="tp" id="tp'+i+'">0% (0)</span></div>').join("");
+ document.getElementById("qlist").innerHTML = QS.map((q,i)=>
+  '<div class="qrow"><div class="qt">Q'+(i+1)+'. '+q.t+'</div><div class="bar"><div class="ba" id="ba'+i+'" style="width:50%">A 0%</div><div class="bb" id="bb'+i+'" style="width:50%">B 0%</div></div><div class="legend"><span>A: '+q.a+'</span><span>B: '+q.b+'</span></div></div>').join("");
+ window.resetAll=function(){
+  if(!dbOk){alert("DB가 설정되지 않았습니다.");return}
+  if(confirm("모든 응답 데이터를 삭제할까요? 복구할 수 없습니다."))
+   fetch(base+"/votes.json",{method:"DELETE"}).then(()=>poll());
+ };
+ function poll(){
+  if(!dbOk)return;
+  fetch(base+"/votes.json").then(r=>r.json()).then(d=>{
+   const votes=d?Object.values(d):[];
+   document.getElementById("cnt").textContent=votes.length;
+   const tc=[0,0,0,0], qa=QS.map(()=>0);
+   votes.forEach(v=>{ if(v&&Array.isArray(v.a)){ tc[v.t]++; v.a.forEach((x,i)=>{if(x===0)qa[i]++}); }});
+   const n=votes.length||1;
+   TYPES.forEach((T,i)=>{
+    const p=Math.round(tc[i]/n*100);
+    document.getElementById("tb"+i).style.width=p+"%";
+    document.getElementById("tp"+i).textContent=p+"% ("+tc[i]+")";
+   });
+   QS.forEach((q,i)=>{
+    const pa=votes.length?Math.round(qa[i]/votes.length*100):50, pb=100-pa;
+    const ea=document.getElementById("ba"+i), eb=document.getElementById("bb"+i);
+    ea.style.width=Math.max(pa,8)+"%"; eb.style.width=Math.max(pb,8)+"%";
+    ea.textContent="A "+(votes.length?pa:0)+"%"; eb.textContent="B "+(votes.length?pb:0)+"%";
+   });
+  }).catch(()=>{});
+ }
+ poll(); setInterval(poll,2000);
+}
+</script>
+</body>
+</html>
