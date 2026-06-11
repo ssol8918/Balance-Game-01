@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>직장생활 밸런스 게임</title>
+<!--
+  ============================================================
+  [필수 설정] 아래 DB_URL 한 줄만 본인의 Firebase 주소로 바꾸세요!
+  예시: const DB_URL = "https://balance-game-xxxxx-default-rtdb.asia-southeast1.firebasedatabase.app";
+  ------------------------------------------------------------
+  - 교육생 접속: https://내주소/  (QR 스캔)
+  - 관리자 접속: https://내주소/?mode=admin
+  ============================================================
+-->
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#f4f6fa; color:#1f2937; }
+  .wrap { max-width:520px; margin:0 auto; padding:20px 16px; }
+  .admin-wrap { max-width:1100px; margin:0 auto; padding:20px; }
+  h1 { font-size:22px; text-align:center; margin-bottom:6px; }
+  .sub { text-align:center; color:#6b7280; font-size:14px; margin-bottom:20px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:20px; margin-bottom:14px; }
+  .progress-bar { height:8px; background:#e5e7eb; border-radius:4px; overflow:hidden; margin-bottom:18px; }
+  .progress-fill { height:100%; background:#2563eb; border-radius:4px; transition:width .3s; }
+  .qnum { color:#2563eb; font-weight:700; font-size:14px; margin-bottom:6px; }
+  .qtitle { font-size:18px; font-weight:700; margin-bottom:16px; line-height:1.4; }
+  .opt { display:block; width:100%; text-align:left; padding:16px; margin-bottom:10px; border:2px solid #d1d5db; border-radius:12px; background:#fff; font-size:15px; line-height:1.45; cursor:pointer; transition:all .15s; font-family:inherit; }
+  .opt:active { transform:scale(.98); }
+  .opt .tag { display:inline-block; font-weight:800; color:#2563eb; margin-right:8px; }
+  .opt:hover { border-color:#2563eb; background:#eff6ff; }
+  .vs { text-align:center; font-weight:800; color:#9ca3af; margin:4px 0 12px; }
+  .btn { display:block; width:100%; padding:14px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .btn.gray { background:#6b7280; }
+  .result-emoji { font-size:54px; text-align:center; margin-bottom:8px; }
+  .result-type { font-size:22px; font-weight:800; text-align:center; margin-bottom:4px; }
+  .result-mbti { text-align:center; color:#2563eb; font-weight:700; margin-bottom:14px; }
+  .result-desc { font-size:15px; line-height:1.6; color:#374151; }
+  .err { background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:14px; border-radius:10px; font-size:14px; line-height:1.5; margin-bottom:14px; }
+  /* admin */
+  .admin-top { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .qr-box { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:18px; text-align:center; flex:0 0 240px; }
+  .qr-box img { width:190px; height:190px; }
+  .qr-box .url { font-size:12px; color:#6b7280; word-break:break-all; margin-top:8px; }
+  .stat-box { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:18px; flex:1; min-width:260px; }
+  .big-num { font-size:34px; font-weight:800; color:#2563eb; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
+  .qcard { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:16px; }
+  .qcard h3 { font-size:14px; margin-bottom:10px; }
+  .bar-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; }
+  .bar-label { flex:0 0 34px; font-weight:700; }
+  .bar-track { flex:1; height:22px; background:#f3f4f6; border-radius:6px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:6px; transition:width .5s; min-width:2px; }
+  .bar-a { background:#2563eb; } .bar-b { background:#f59e0b; }
+  .bar-pct { flex:0 0 86px; text-align:right; color:#374151; font-variant-numeric:tabular-nums; }
+  .opt-text { font-size:11px; color:#6b7280; margin-bottom:8px; line-height:1.5; }
+  .type-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:14px; }
+  .type-name { flex:0 0 190px; font-weight:700; }
+  .type-mbti { font-size:12px; color:#2563eb; font-weight:600; }
+  .type-track { flex:1; height:24px; background:#f3f4f6; border-radius:6px; overflow:hidden; }
+  .type-fill { height:100%; background:#2563eb; border-radius:6px; transition:width .5s; min-width:2px; }
+  .type-pct { flex:0 0 90px; text-align:right; font-variant-numeric:tabular-nums; }
+  .reset-btn { padding:10px 18px; border:1px solid #d1d5db; background:#fff; color:#b91c1c; border-radius:10px; font-weight:700; cursor:pointer; font-family:inherit; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ★★★★★ 여기 한 줄만 수정하세요! (따옴표 안에 Firebase 주소) ★★★★★ */
+const DB_URL = "https://balance-game-01-default-rtdb.asia-southeast1.firebasedatabase.app/";
+/* ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★ */
+
+const QUESTIONS = [
+ { t:"인생 선택의 기로!", a:"월 200 받는 백수", b:"월 500 버는 직장인", axis:1 },
+ { t:"출퇴근과 상사", a:"도보 5분 거리인데 매일 화내는 사이코 팀장", b:"왕복 3시간 거리인데 매일 칭찬하는 천사 팀장", axis:1 },
+ { t:"급여와 워라밸", a:"월급은 그대로지만 매일 오후 4시 칼퇴근", b:"월급은 2배지만 매일 밤 10시까지 야근", axis:1 },
+ { t:"업무 스타일", a:"완벽하게 계획을 세운 후 실행 (대신 속도가 느림)", b:"일단 빠르게 실행하면서 수정 (대신 잔실수 발생)", axis:2 },
+ { t:"점심시간", a:"내 돈으로 사 먹는 편의점 컵라면 (혼밥, 터치 없음)", b:"팀장님이 사주는 10만원 오마카세 (식사 내내 업무 얘기)", axis:1 },
+ { t:"커뮤니케이션 방식", a:"카톡으로만 업무 지시 (기록 남음, 밤에도 연락 옴)", b:"전화로만 업무 지시 (근무시간만, 기록 안 남음)", axis:2 },
+ { t:"커리어 가치관", a:"연봉 동결이지만 절대 안 잘리는 정년 보장 회사", b:"매년 연봉 20% 인상이지만 내일 해고될 수 있는 회사", axis:2 },
+ { t:"최악의 실수 대결!", a:"새벽 2시 팀장님에게 게임 초대 문자 잘못 보내기", b:"동료에게 보낼 팀장 뒷담화, 팀장님께 잘못 보내기", axis:2 }
+];
+
+const TYPES = {
+ AA:{ emoji:"🍀", name:"소확행 안정주의자", mbti:"참고 MBTI: ISFJ · ISTJ", desc:"평화와 안정 속에서 묵묵히 제 몫을 해내는 '믿고 맡기는 사람'입니다. 무리한 도전보다는 확실한 일상과 심리적 안정을 지키는 것이 행복의 핵심! 조직에서는 꾸준함과 성실함으로 신뢰를 쌓는 타입입니다." },
+ AB:{ emoji:"🏄", name:"마이웨이 자유인", mbti:"참고 MBTI: ISFP · INFP", desc:"워라밸과 자율성이 무엇보다 중요한 타입입니다. 간섭받지 않을 때 효율이 폭발하며, 내 페이스대로 일할 때 최고의 결과를 냅니다. 자유로운 영혼이지만 좋아하는 일에는 누구보다 깊게 몰입합니다." },
+ BA:{ emoji:"♟️", name:"치밀한 성장 전략가", mbti:"참고 MBTI: INTJ · ENTJ", desc:"지금의 고생은 미래를 위한 투자! 명확한 목표를 세우고 계획적으로 커리어를 쌓아가는 야망가입니다. 보상과 성장이 확실하다면 어려운 길도 기꺼이 선택하며, 조직에서 핵심 인재로 성장할 가능성이 높습니다." },
+ BB:{ emoji:"🔥", name:"열정만렙 도전가", mbti:"참고 MBTI: ENFP · ESTP", desc:"고민할 시간에 일단 부딪히는 행동파! 변화와 새로움을 즐기고, 돌발 상황에서도 특유의 순발력으로 헤쳐 나갑니다. 조직의 분위기 메이커이자 막힌 일을 뚫어내는 돌파구 역할을 하는 타입입니다." }
+};
+
+const isAdmin = new URLSearchParams(location.search).get("mode") === "admin";
+const app = document.getElementById("app");
+const dbReady = DB_URL.startsWith("https://");
+const base = DB_URL.replace(/\/+$/,"");
+
+/* ---------------- 학습자 모드 ---------------- */
+let answers = [];
+function renderQ(i){
+ const q = QUESTIONS[i];
+ app.innerHTML = `<div class="wrap">
+  <h1>⚖️ 직장생활 밸런스 게임</h1>
+  <div class="sub">둘 중 하나만 고를 수 있다면?</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:${(i/QUESTIONS.length)*100}%"></div></div>
+  <div class="card">
+   <div class="qnum">Q${i+1} / ${QUESTIONS.length}</div>
+   <div class="qtitle">${q.t}</div>
+   <button class="opt" onclick="pick(${i},'A')"><span class="tag">A</span>${q.a}</button>
+   <div class="vs">VS</div>
+   <button class="opt" onclick="pick(${i},'B')"><span class="tag">B</span>${q.b}</button>
+  </div></div>`;
+}
+window.pick = function(i, c){
+ answers[i] = c;
+ if(i+1 < QUESTIONS.length){ renderQ(i+1); } else { finish(); }
+};
+function calcType(){
+ let a1A=0,a1B=0,a2A=0,a2B=0;
+ QUESTIONS.forEach((q,i)=>{
+  if(q.axis===1){ answers[i]==="A"?a1A++:a1B++; }
+  else { answers[i]==="A"?a2A++:a2B++; }
+ });
+ return (a1A>=a1B?"A":"B")+(a2A>=a2B?"A":"B");
+}
+async function finish(){
+ const key = calcType();
+ const t = TYPES[key];
+ app.innerHTML = `<div class="wrap"><h1>⚖️ 직장생활 밸런스 게임</h1>
+  <div class="sub">분석 결과가 나왔어요!</div>
+  <div class="card">
+   <div class="result-emoji">${t.emoji}</div>
+   <div class="result-type">${t.name}</div>
+   <div class="result-mbti">${t.mbti}</div>
+   <div class="result-desc">${t.desc}</div>
+  </div>
+  <div class="card" style="text-align:center;color:#6b7280;font-size:14px;" id="sendmsg">결과 전송 중...</div></div>`;
+ if(!dbReady){ document.getElementById("sendmsg").textContent="(서버 미설정: 결과가 집계되지 않았습니다)"; return; }
+ try{
+  await fetch(base + "/results.json", {
+   method:"POST",
+   body: JSON.stringify({ answers: answers, type: key, ts: Date.now() })
+  });
+  document.getElementById("sendmsg").textContent = "✅ 결과가 전송되었습니다. 스크린을 봐주세요!";
+ }catch(e){
+  document.getElementById("sendmsg").textContent = "⚠️ 전송 실패: 네트워크를 확인 후 새로고침 해주세요.";
+ }
+}
+
+/* ---------------- 관리자 모드 ---------------- */
+function renderAdminShell(){
+ const learnerUrl = location.origin + location.pathname;
+ const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=380x380&data=" + encodeURIComponent(learnerUrl);
+ let qcards = QUESTIONS.map((q,i)=>`
+  <div class="qcard">
+   <h3>Q${i+1}. ${q.t}</h3>
+   <div class="opt-text">A: ${q.a}<br>B: ${q.b}</div>
+   <div class="bar-row"><span class="bar-label">A</span><div class="bar-track"><div class="bar-fill bar-a" id="qa${i}" style="width:0%"></div></div><span class="bar-pct" id="pa${i}">0% (0명)</span></div>
+   <div class="bar-row"><span class="bar-label">B</span><div class="bar-track"><div class="bar-fill bar-b" id="qb${i}" style="width:0%"></div></div><span class="bar-pct" id="pb${i}">0% (0명)</span></div>
+  </div>`).join("");
+ let trows = Object.keys(TYPES).map(k=>`
+  <div class="type-row">
+   <span class="type-name">${TYPES[k].emoji} ${TYPES[k].name}<br><span class="type-mbti">${TYPES[k].mbti}</span></span>
+   <div class="type-track"><div class="type-fill" id="t${k}" style="width:0%"></div></div>
+   <span class="type-pct" id="tp${k}">0% (0명)</span>
+  </div>`).join("");
+ app.innerHTML = `<div class="admin-wrap">
+  <h1>⚖️ 직장생활 밸런스 게임 — 실시간 현황</h1>
+  <div class="sub">2초마다 자동 갱신됩니다</div>
+  ${dbReady ? "" : '<div class="err">⚠️ <b>DB 설정 필요:</b> 파일 상단의 DB_URL에 Firebase 주소를 입력해 주세요. 현재는 집계가 작동하지 않습니다.</div>'}
+  <div class="admin-top">
+   <div class="qr-box">
+    <div style="font-weight:700;margin-bottom:8px;">📱 QR 스캔으로 참여!</div>
+    <img src="${qrSrc}" alt="참여용 QR코드">
+    <div class="url">${learnerUrl}</div>
+   </div>
+   <div class="stat-box">
+    <div style="font-size:14px;color:#6b7280;">참여 완료 인원</div>
+    <div class="big-num"><span id="total">0</span>명</div>
+    <div style="margin:14px 0 10px;font-weight:700;">성향 유형 분포</div>
+    ${trows}
+    <div style="margin-top:12px;text-align:right;"><button class="reset-btn" onclick="resetData()">🗑 데이터 초기화</button></div>
+   </div>
+  </div>
+  <div class="grid">${qcards}</div>
+ </div>`;
+}
+async function poll(){
+ if(!dbReady) return;
+ try{
+  const res = await fetch(base + "/results.json");
+  const data = await res.json();
+  const list = data ? Object.values(data) : [];
+  document.getElementById("total").textContent = list.length;
+  for(let i=0;i<QUESTIONS.length;i++){
+   let a=0,b=0;
+   list.forEach(r=>{ if(r.answers && r.answers[i]==="A") a++; else if(r.answers && r.answers[i]==="B") b++; });
+   const tot = a+b;
+   const pa = tot? Math.round(a/tot*100):0, pb = tot? 100-pa:0;
+   document.getElementById("qa"+i).style.width = pa+"%";
+   document.getElementById("qb"+i).style.width = pb+"%";
+   document.getElementById("pa"+i).textContent = pa+"% ("+a+"명)";
+   document.getElementById("pb"+i).textContent = pb+"% ("+b+"명)";
+  }
+  const counts = {AA:0,AB:0,BA:0,BB:0};
+  list.forEach(r=>{ if(counts[r.type]!==undefined) counts[r.type]++; });
+  Object.keys(counts).forEach(k=>{
+   const p = list.length? Math.round(counts[k]/list.length*100):0;
+   document.getElementById("t"+k).style.width = p+"%";
+   document.getElementById("tp"+k).textContent = p+"% ("+counts[k]+"명)";
+  });
+ }catch(e){ /* 일시 오류는 다음 갱신에서 회복 */ }
+}
+window.resetData = async function(){
+ if(!dbReady) return alert("DB_URL이 설정되지 않았습니다.");
+ if(!confirm("모든 응답 데이터를 삭제할까요? 복구할 수 없습니다.")) return;
+ await fetch(base + "/results.json", { method:"DELETE" });
+ poll();
+};
+
+/* ---------------- 시작 ---------------- */
+if(isAdmin){
+ renderAdminShell();
+ poll();
+ setInterval(poll, 2000);
+}else{
+ renderQ(0);
+}
+</script>
+</body>
+</html>
